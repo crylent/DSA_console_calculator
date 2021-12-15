@@ -32,8 +32,26 @@ MathUnit* parse_unit(string unit_str) {
 }
 
 Stack* process_expression(string expression) {
-    expression.erase(remove_if(expression.begin(), expression.end(), ::isspace), expression.end()); // clear up whitespaces
+    string copy = expression; // check validity of input on copy of the expression
+    copy = regex_replace(copy, regex("[.\\d\\+\\-\\*\\/\\^\\(\\)e\\s]{1}"), "="); // replace 1-symbol units with '='
+    copy = regex_replace(copy, regex("tg|ln|pi"), "=="); // replace 2-symbol units with '=='
+    copy = regex_replace(copy, regex("sin|cos|ctg|log"), "==="); // replace 3-symbol units with '==='
+    copy = regex_replace(copy, regex("log2|sqrt"), "===="); // replace 4-symbol units with '===='
+    int invalid_position = -1;
+    string invalid_symbols = "";
+    for (int i = 0; i < copy.length(); i++) {
+        if (copy[i] != '=') { // should contain only '=' after replacing all allowed symbols
+            if (invalid_position == -1) {
+                invalid_position = i;
+            }
+            invalid_symbols += { copy[i] };
+        }
+        else if (copy[i] == '=' && invalid_position != -1) {
+            throw invalid_argument(string("Invalid symbols in the expression: ") + invalid_symbols + string(" (position ") + to_string(invalid_position) + ")");
+        }
+    }
 
+    expression.erase(remove_if(expression.begin(), expression.end(), ::isspace), expression.end()); // clear up whitespaces
     // make difference between the unary and binary minuses
     if (expression[0] == '-') {
         expression[0] = '_';
@@ -43,13 +61,6 @@ Stack* process_expression(string expression) {
 
     Stack* init = new Stack(); // mathematical units in initial order
     regex rgx("[.\\d]+|[\\+\\-\\*\\/\\^\\(\\)]{1}|_|sin|cos|tg|ctg|log2|ln|log|sqrt|pi|e"); // number or operator or function or constant
-
-    string copy = expression;
-    copy = regex_replace(copy, rgx, ""); // should be clear after removing all allowed symbols
-    if (!copy.empty()) {
-        throw invalid_argument("Invalid symbols in the expression");
-    }
-
     smatch match;
     while (regex_search(expression, match, rgx)) {
         string unit_str = match.str();
@@ -174,8 +185,15 @@ MathUnit* prefix_calculation(Stack* expression) {
 int main() {
     string expression;
     getline(cin, expression);
-    Stack* init = process_expression(expression); // mathematical units in initial order
-    Stack* out = prefix_notation(init); // mathematical units in prefix notation
+    Stack *init, *out;
+    try {
+        init = process_expression(expression); // mathematical units in initial order
+        out = prefix_notation(init); // mathematical units in prefix notation
+    }
+    catch (invalid_argument error) {
+        cout << error.what();
+        return 0;
+    }
     Stack* out_reverse = out->reverse();
     while (MathUnit* unit = out->pop()) { // print prefix notation
         cout << *unit;

@@ -32,10 +32,16 @@ namespace cw3unittest
 		TEST_METHOD(InvalidSymbolsException)
 		{
 			try {
-				process_expression("death(666)");
+				process_expression("dark(666)");
 			}
 			catch (exception error) {
-				Assert::AreEqual("Invalid symbols in the expression", error.what());
+				Assert::AreEqual("Invalid symbols in the expression: dark (position 0)", error.what());
+			}
+			try {
+				process_expression("sin(3) + cos(2) + abyss(1)");
+			}
+			catch (exception error) {
+				Assert::AreEqual("Invalid symbols in the expression: abyss (position 18)", error.what());
 			}
 		}
 
